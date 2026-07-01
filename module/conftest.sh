@@ -134,6 +134,15 @@ static void conftest_flush(struct drm_crtc *c, struct drm_atomic_commit *s) { }
 struct drm_crtc_helper_funcs conftest = { .atomic_flush = conftest_flush };
 EOF
 
+# The plane atomic helper callbacks (.atomic_update) switched to
+# struct drm_atomic_commit * in 7.2 (same boundary as CRTC, probed separately
+# for vendor kernels with partial backports).
+compile_test EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG <<'EOF'
+#include <drm/drm_modeset_helper_vtables.h>
+static void conftest_update(struct drm_plane *p, struct drm_atomic_commit *s) { }
+struct drm_plane_helper_funcs conftest = { .atomic_update = conftest_update };
+EOF
+
 compile_test EVDI_HAVE_PLANE_ATOMIC_STATE_ARG <<'EOF'
 #include <drm/drm_modeset_helper_vtables.h>
 static void conftest_update(struct drm_plane *p, struct drm_atomic_state *s) { }

@@ -223,16 +223,18 @@ static const struct drm_crtc_funcs evdi_crtc_funcs = {
 };
 
 static void evdi_plane_atomic_update(struct drm_plane *plane,
-#ifdef EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG
+#ifdef EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG
 				     struct drm_atomic_commit *atom_state
 #elif defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG)
 				     struct drm_atomic_state *atom_state
+#elif defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+				     struct drm_atomic_commit *atom_state
 #else
 				     struct drm_plane_state *old_state
 #endif
 		)
 {
-#if defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+#if defined(EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG) || defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
 	struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(atom_state, plane);
 #else
 #endif
@@ -323,16 +325,18 @@ static void evdi_cursor_atomic_get_rect(struct drm_clip_rect *rect,
 }
 
 static void evdi_cursor_atomic_update(struct drm_plane *plane,
-#ifdef EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG
+#ifdef EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG
 				     struct drm_atomic_commit *atom_state
 #elif defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG)
 				     struct drm_atomic_state *atom_state
+#elif defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+				     struct drm_atomic_commit *atom_state
 #else
 				     struct drm_plane_state *old_state
 #endif
 		)
 {
-#if defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+#if defined(EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG) || defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
 	struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(atom_state, plane);
 
 #else
@@ -539,6 +543,56 @@ static const struct drm_mode_config_funcs evdi_mode_funcs = {
 	.atomic_commit = drm_atomic_helper_commit,
 	.atomic_check = drm_atomic_helper_check
 };
+
+#if IS_ENABLED(CONFIG_DRM_EVDI_KUNIT_TEST)
+#include <drm/drm_atomic.h>
+#include "tests/evdi_test.h"
+
+void evdi_kunit_cursor_atomic_update_null_fb(struct drm_device *dev)
+{
+	struct drm_plane *plane;
+	struct drm_plane *cursor = NULL;
+
+	drm_for_each_plane(plane, dev) {
+		if (plane->type == DRM_PLANE_TYPE_CURSOR) {
+			cursor = plane;
+			break;
+		}
+	}
+
+	if (!cursor)
+		return;
+
+#if defined(EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG) || defined(EVDI_HAVE_PLANE_ATOMIC_STATE_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+	{
+		struct drm_atomic_state *state = drm_atomic_state_alloc(dev);
+
+		if (!state)
+			return;
+
+		if (drm_atomic_get_plane_state(state, cursor)) {
+			drm_atomic_state_put(state);
+			return;
+		}
+
+		cursor->state->fb = NULL;
+#if defined(EVDI_HAVE_PLANE_ATOMIC_COMMIT_ARG) || defined(EVDI_HAVE_CRTC_ATOMIC_COMMIT_ARG)
+		evdi_cursor_atomic_update(cursor, (struct drm_atomic_commit *)state);
+#else
+		evdi_cursor_atomic_update(cursor, state);
+#endif
+		drm_atomic_state_put(state);
+	}
+#else
+	{
+		struct drm_plane_state old = *cursor->state;
+
+		cursor->state->fb = NULL;
+		evdi_cursor_atomic_update(cursor, &old);
+	}
+#endif
+}
+#endif
 
 void evdi_modeset_init(struct drm_device *dev)
 {
