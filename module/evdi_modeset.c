@@ -341,7 +341,6 @@ static void evdi_cursor_atomic_update(struct drm_plane *plane,
 		struct drm_plane_state *state = plane->state;
 		struct evdi_device *evdi = plane->dev->dev_private;
 		struct drm_framebuffer *fb = state->fb;
-		struct evdi_framebuffer *efb = to_evdi_fb(fb);
 
 		struct drm_clip_rect old_rect;
 		struct drm_clip_rect rect;
@@ -358,6 +357,7 @@ static void evdi_cursor_atomic_update(struct drm_plane *plane,
 
 		if (fb != old_state->fb) {
 			if (fb != NULL) {
+				struct evdi_framebuffer *efb = to_evdi_fb(fb);
 				uint32_t stride = 4 * fb->width;
 
 				evdi_cursor_set(evdi->cursor,
@@ -376,6 +376,8 @@ static void evdi_cursor_atomic_update(struct drm_plane *plane,
 
 		if (!evdi->cursor_events_enabled) {
 			if (fb != NULL) {
+				struct evdi_framebuffer *efb = to_evdi_fb(fb);
+
 				if (efb->obj->allow_sw_cursor_rect_updates) {
 					evdi_cursor_atomic_get_rect(&old_rect, old_state);
 					evdi_cursor_atomic_get_rect(&rect, state);
