@@ -486,10 +486,20 @@ static int evdi_crtc_init(struct drm_device *dev)
 
 	primary_plane = evdi_create_plane(dev, DRM_PLANE_TYPE_PRIMARY,
 					  &evdi_plane_helper_funcs);
+	if (!primary_plane) {
+		kfree(crtc);
+		return -ENOMEM;
+	}
 
 #ifdef EVDI_HAVE_DRM_PRIME_PAGES_TO_SG_DEV
 	cursor_plane = evdi_create_plane(dev, DRM_PLANE_TYPE_CURSOR,
 						&evdi_cursor_helper_funcs);
+	if (!cursor_plane) {
+		drm_plane_cleanup(primary_plane);
+		kfree(primary_plane);
+		kfree(crtc);
+		return -ENOMEM;
+	}
 #endif
 
 #ifdef EVDI_HAVE_ATOMIC_DIRTYFB
@@ -503,6 +513,19 @@ static int evdi_crtc_init(struct drm_device *dev)
 					   );
 
 	EVDI_DEBUG("drm_crtc_init: %d p%p\n", status, primary_plane);
+	if (status) {
+		EVDI_ERROR("drm_crtc_init_with_planes failed: %d\n", status);
+		if (cursor_plane) {
+			drm_plane_cleanup(cursor_plane);
+			kfree(cursor_plane);
+		}
+		drm_plane_cleanup(primary_plane);
+		kfree(primary_plane);
+		drm_crtc_cleanup(crtc);
+		kfree(crtc);
+		return status;
+	}
+
 	drm_crtc_helper_add(crtc, &evdi_helper_funcs);
 
 	return 0;

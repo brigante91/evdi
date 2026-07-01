@@ -138,7 +138,7 @@ static void addFrameBuffer(evdi_handle context,
 			continue;
 
 		*node = calloc(1, sizeof(struct evdi_frame_buffer_node));
-		assert(node);
+		assert(*node);
 		memcpy(*node, frame_buffer, sizeof(struct evdi_buffer));
 		return;
 	}
@@ -575,7 +575,7 @@ evdi_handle evdi_open(int device)
 	evdi_handle h = EVDI_INVALID_HANDLE;
 
 	fd = open_device(device);
-	if (fd > 0) {
+	if (fd >= 0) {
 		if (is_evdi(fd) && is_evdi_compatible(fd)) {
 			h = calloc(1, sizeof(struct evdi_device_context));
 			if (h) {
@@ -785,12 +785,15 @@ void evdi_register_buffer(evdi_handle handle, struct evdi_buffer buffer)
 
 void evdi_unregister_buffer(evdi_handle handle, int bufferId)
 {
-	struct evdi_buffer *bufferToRemove = NULL;
+	struct evdi_frame_buffer_node *node;
 
 	assert(handle);
 
-	bufferToRemove = &findBuffer(handle, bufferId)->frame_buffer;
-	assert(bufferToRemove);
+	node = findBuffer(handle, bufferId);
+	if (!node) {
+		evdi_log("Buffer %d not found. Not unregistering.", bufferId);
+		return;
+	}
 
 	removeFrameBuffer(handle, &bufferId);
 }
@@ -1002,16 +1005,32 @@ void evdi_handle_events(evdi_handle handle, struct evdi_event_context *evtctx)
 {
 	char buffer[1024];
 	int i = 0;
+	int bytesRead;
 
-	int bytesRead = read(handle->fd, buffer, sizeof(buffer));
+	if (!handle) {
+		evdi_log("Error: Handle is null!");
+		return;
+	}
 
 	if (!evtctx) {
 		evdi_log("Error: Event context is null!");
 		return;
 	}
 
+	bytesRead = read(handle->fd, buffer, sizeof(buffer));
+	if (bytesRead <= 0) {
+		if (bytesRead < 0)
+			evdi_log("Error: read failed: %s", strerror(errno));
+		return;
+	}
+
 	while (i < bytesRead) {
 		struct drm_event *e = (struct drm_event *) &buffer[i];
+
+		if (e->length < sizeof(*e) || i + e->length > bytesRead) {
+			evdi_log("Warning: invalid event length %u", e->length);
+			break;
+		}
 
 		evdi_handle_event(handle, evtctx, e);
 
