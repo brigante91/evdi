@@ -19,8 +19,17 @@ LIBDIR ?= $(PREFIX)/lib
 
 default: libevdi.so.$(LIBVER)
 
+test: test_handle_events
+	./test_handle_events
+
+evdi_lib_test.o: evdi_lib.c
+	$(CC) $(CFLAGS) -DEVDI_ENABLE_UNIT_TESTS -o $@ -c $<
+
+test_handle_events: test/test_handle_events.c evdi_lib_test.o
+	$(CC) $(CFLAGS) -o $@ $^
+
 clean:
-	rm -rf *.o libevdi.so*
+	rm -rf *.o libevdi.so* test_handle_events
 
 %.o: %.c $(DEPS)
 	$(CC) $(CFLAGS) -o $@ -c $<

@@ -136,6 +136,11 @@ void evdi_set_logging(struct evdi_logging evdi_logging);
 
 bool Xorg_running(void);
 
+#ifdef EVDI_ENABLE_UNIT_TESTS
+bool evdi_unit_test_drm_event_bounds_valid(int bytes_read, int offset,
+					   unsigned int event_length);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

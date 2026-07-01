@@ -200,6 +200,23 @@ static int is_evdi_compatible(int fd)
 	return 0;
 }
 
+static bool evdi_drm_event_bounds_valid(int bytes_read, int offset,
+					 const struct drm_event *e)
+{
+	return e->length >= sizeof(*e) &&
+	       offset + (int)e->length <= bytes_read;
+}
+
+#ifdef EVDI_ENABLE_UNIT_TESTS
+bool evdi_unit_test_drm_event_bounds_valid(int bytes_read, int offset,
+					   unsigned int event_length)
+{
+	struct drm_event e = { .length = event_length };
+
+	return evdi_drm_event_bounds_valid(bytes_read, offset, &e);
+}
+#endif
+
 static int is_evdi(int fd)
 {
 	char name[64] = { 0 };
@@ -1027,7 +1044,7 @@ void evdi_handle_events(evdi_handle handle, struct evdi_event_context *evtctx)
 	while (i < bytesRead) {
 		struct drm_event *e = (struct drm_event *) &buffer[i];
 
-		if (e->length < sizeof(*e) || i + e->length > bytesRead) {
+		if (!evdi_drm_event_bounds_valid(bytesRead, i, e)) {
 			evdi_log("Warning: invalid event length %u", e->length);
 			break;
 		}
