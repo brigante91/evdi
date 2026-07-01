@@ -9,8 +9,10 @@ FLAGS_CXX=$(FLAGS)
 .PHONY: module library pyevdi
 all: module library pyevdi
 
+# Kernel kbuild applies its own warning policy; do not pass userspace -Werror flags
+# (they break against distro kernel headers, e.g. Fedora sign-compare in linux/*.h).
 module:
-	CFLAGS="-isystem./include -isystem./include/uapi $(FLAGS_C) $(CFLAGS)" $(MAKE) -C module $(MFLAGS)
+	CFLAGS="-isystem./include -isystem./include/uapi $(CFLAGS)" $(MAKE) -C module $(MFLAGS)
 
 library:
 	CFLAGS="-I../module $(FLAGS_C) $(CFLAGS)" $(MAKE) -C library $(MFLAGS)
