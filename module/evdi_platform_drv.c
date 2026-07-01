@@ -121,6 +121,9 @@ static struct platform_device *evdi_platform_drv_create_new_device(struct evdi_p
 	}
 
 	pdev = evdi_platform_dev_create(&pdevinfo);
+	if (IS_ERR_OR_NULL(pdev))
+		return pdev;
+
 	ctx->devices[pdevinfo.id] = pdev;
 	ctx->dev_count++;
 

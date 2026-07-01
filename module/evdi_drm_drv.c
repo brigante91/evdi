@@ -208,7 +208,8 @@ err_init:
 err_free:
 	EVDI_ERROR("Failed to setup drm device %d\n", ret);
 	evdi_cursor_free(evdi->cursor);
-	kfree(evdi->painter);
+	evdi_painter_cleanup(evdi->painter);
+	evdi->painter = NULL;
 	kfree(evdi);
 	dev->dev_private = NULL;
 	return ret;
