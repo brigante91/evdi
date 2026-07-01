@@ -262,5 +262,30 @@ static void __exit evdi_exit(void)
 	EVDI_INFO("Exit %s driver\n", DRIVER_NAME);
 }
 
+#if IS_ENABLED(CONFIG_DRM_EVDI_KUNIT_TEST)
+#include "tests/evdi_test.h"
+
+int evdi_kunit_test_platform_add_overflow(struct device *device)
+{
+	struct evdi_platform_drv_context ctx = { 0 };
+	unsigned int before;
+	int ret;
+
+	mutex_init(&ctx.lock);
+	ctx.dev_count = EVDI_DEVICE_COUNT_MAX;
+	dev_set_drvdata(device, &ctx);
+
+	before = evdi_platform_device_count(device);
+	ret = evdi_platform_add_devices(device, 1);
+
+	if (ret != -EINVAL)
+		return ret ? ret : -EIO;
+	if (evdi_platform_device_count(device) != before)
+		return -EIO;
+
+	return 0;
+}
+#endif
+
 module_init(evdi_init);
 module_exit(evdi_exit);

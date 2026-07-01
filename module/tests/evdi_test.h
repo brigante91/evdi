@@ -47,6 +47,11 @@ void evdi_test_data_exit(struct kunit *test, struct evdi_test_data *data);
 /* evdi test utils */
 void __user *evdi_kunit_alloc_usermem(struct kunit *test, unsigned int size);
 
+struct drm_device;
+struct device;
+void evdi_kunit_cursor_atomic_update_null_fb(struct drm_device *dev);
+int evdi_kunit_test_platform_add_overflow(struct device *device);
+
 #endif // CONFIG_DRM_EVDI_KUNIT_TEST
 #endif // EVDI_TEST_H
 
